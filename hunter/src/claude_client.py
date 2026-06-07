@@ -4,10 +4,12 @@ Kept separate so tests can mock this single seam instead of the whole network.
 """
 
 import json
-import re
 import os
+import re
 
 import anthropic
+
+from src.models import Opportunity
 
 
 def _extract_json(text: str) -> dict:
@@ -29,21 +31,30 @@ def _extract_json(text: str) -> dict:
             raise
         return json.loads(match.group(0))
 
-from src.models import Opportunity
 
 _MODEL = "claude-haiku-4-5"
 
 _SYSTEM_PROMPT = """You are the Hunter, qualifying freelance opportunities for a Python dev squad.
 Score the opportunity on a 0-10 scale and classify it.
 
-Rules you must apply:
-- Strong currencies (USD/EUR/GBP) are normal. BRL is normally rejected, EXCEPT when
-  the BRL opportunity is exceptional: high value, very clear scope, comfortable deadline,
-  strong client, profitability above the international average. In that exceptional case,
-  classify as OBSERVAR and set national_flag true.
-- Vague scope ("explain after we connect", "maybe an API", "more tasks later") lowers
-  clarity and must raise alerts.
-- Classification by final score: 6-10 NOTIFICAR, 4-5.9 OBSERVAR, 0-3.9 DESCARTAR.
+Apply these rules IN ORDER. Earlier rules override later ones.
+
+RULE 1 — BRL exceptional (overrides everything below):
+BRL is normally rejected. EXCEPT when a BRL opportunity is exceptional: high value,
+very clear scope, comfortable deadline, strong client, profitability above the
+international average. In that exceptional case you MUST set classification to
+OBSERVAR and national_flag to true, REGARDLESS of how high the score is. A high
+score does NOT turn an exceptional BRL into NOTIFICAR — it stays OBSERVAR so the
+human decides. Score it on merit (it can be 7+), but the label is OBSERVAR.
+
+RULE 2 — Vague scope:
+If the scope is vague ("explain after we connect", "maybe an API", "more tasks
+later", no concrete deliverables), you MUST raise alerts describing each red flag.
+If it is vague but has SOME usable technical hint, classify as OBSERVAR (let the
+human decide). If it is so vague there is nothing to build, classify as DESCARTAR.
+
+RULE 3 — Score-based classification (only when rules above do not apply):
+6-10 NOTIFICAR, 4-5.9 OBSERVAR, 0-3.9 DESCARTAR.
 
 Respond with ONLY a JSON object, no markdown, no preamble:
 {"score": <float>, "classification": "<NOTIFICAR|OBSERVAR|DESCARTAR>",

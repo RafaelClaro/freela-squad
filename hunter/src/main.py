@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
+
 from src import classifier, telegram_format, telegram_sender
 from src.models import Opportunity
 
