@@ -1,0 +1,74 @@
+[
+  {
+    "id": "1",
+    "platform": "Upwork",
+    "title": "Build a REST API for a small e-commerce inventory system",
+    "price_model": "fixed",
+    "budget": 900,
+    "currency": "USD",
+    "deadline_days": 5,
+    "client_reviews": 12,
+    "payment_verified": true,
+    "description": "REST API to manage product inventory. CRUD for products, stock movements, low-stock alert flag, API key auth, PostgreSQL, Swagger, tests. Python (FastAPI or Flask)."
+  },
+  {
+    "id": "2",
+    "platform": "Freelancer",
+    "title": "iOS + Android shopping app (React Native)",
+    "price_model": "fixed",
+    "budget": 1200,
+    "currency": "USD",
+    "deadline_days": 7,
+    "client_reviews": 8,
+    "payment_verified": true,
+    "description": "Cross-platform shopping app in React Native. iOS and Android. Backend already exists. Build the mobile app only."
+  },
+  {
+    "id": "3",
+    "platform": "Freelancer",
+    "title": "Script Python para automacao de planilhas",
+    "price_model": "fixed",
+    "budget": 450,
+    "currency": "BRL",
+    "deadline_days": 4,
+    "client_reviews": 3,
+    "payment_verified": true,
+    "description": "Script Python que le varios Excel de uma pasta, consolida e gera relatorio CSV. 20 a 30 arquivos por vez."
+  },
+  {
+    "id": "4",
+    "platform": "Upwork",
+    "title": "URGENT - Telegram bot needed, deliver in 12 hours",
+    "price_model": "fixed",
+    "budget": 200,
+    "currency": "USD",
+    "deadline_days": 0.5,
+    "client_reviews": 5,
+    "payment_verified": true,
+    "description": "Telegram bot that replies with weather for a city. Need it within 12 hours. Python preferred."
+  },
+  {
+    "id": "5",
+    "platform": "Upwork",
+    "title": "Need help with my web project",
+    "price_model": "hourly",
+    "budget": 40,
+    "currency": "USD",
+    "deadline_days": null,
+    "client_reviews": 1,
+    "payment_verified": true,
+    "description": "A web project that needs some work. Mostly backend, some data processing, maybe an API. Python is fine. Will explain details after we connect. Might have more tasks later."
+  },
+  {
+    "id": "6",
+    "platform": "Freelancer",
+    "title": "API de integracao fiscal (NF-e) com Telegram - Python/FastAPI",
+    "price_model": "fixed",
+    "budget": 14000,
+    "currency": "BRL",
+    "deadline_days": 5,
+    "client_reviews": 27,
+    "payment_verified": true,
+    "description": "API Python (FastAPI): recebe NF-e via REST, valida e persiste em PostgreSQL, notifica via bot Telegram para confirmacao, registra confirmacao. Swagger + Pytest. Especificacao dos campos pronta."
+  }
+]
