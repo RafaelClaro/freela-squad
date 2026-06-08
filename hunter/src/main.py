@@ -1,6 +1,5 @@
-"""Hunter entrypoint — reads opportunities from JSON, qualifies, sends notifications."""
+"""Hunter entrypoint — collects opportunities from a source, qualifies, notifies."""
 
-import json
 import logging
 import sys
 from pathlib import Path
@@ -8,25 +7,23 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src import classifier, telegram_format, telegram_sender
-from src.models import Opportunity
+from src.collectors.base import Collector
+from src.collectors.manual import ManualCollector
+
+load_dotenv()  # load credentials from .env into the environment
 
 logging.basicConfig(level=logging.INFO)
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def load_opportunities(path: Path) -> list[Opportunity]:
-    """Load opportunities from a JSON file into Opportunity objects."""
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    return [Opportunity(**item) for item in raw]
+def run(collector: Collector, dry_run: bool = False) -> None:
+    """Collect opportunities from any source, qualify, and notify the qualified ones.
 
-
-def run(path: Path, dry_run: bool = False) -> None:
-    """Qualify every opportunity and notify the ones that qualify.
-
+    The collector can be ManualCollector, FreelancerCollector, UpworkCollector, etc.
+    The pipeline treats them all identically — that is the white-label design.
     When dry_run is True, notifications are printed instead of sent to Telegram.
     """
-    opportunities = load_opportunities(path)
+    opportunities = collector.collect()
     for opportunity in opportunities:
         result = classifier.qualify(opportunity)
         logger.info(f"#{opportunity.id}: {result.classification} (score {result.score:.1f})")
@@ -44,4 +41,4 @@ if __name__ == "__main__":
     is_dry_run = "--dry-run" in args
     positional = [a for a in args if not a.startswith("--")]
     input_path = Path(positional[0]) if positional else Path("tests/fixtures/briefings.json")
-    run(input_path, dry_run=is_dry_run)
+    run(ManualCollector(input_path), dry_run=is_dry_run)
