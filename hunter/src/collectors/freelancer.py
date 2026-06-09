@@ -56,6 +56,7 @@ class FreelancerCollector(Collector):
         self.query = query
         self.limit = limit
         self.token = os.environ.get("FREELANCER_OAUTH_TOKEN")
+        # Empty or unset FLN_URL falls back to the sandbox default.
         self.base_url = os.environ.get("FLN_URL") or _DEFAULT_BASE_URL
 
     def collect(self) -> list[Opportunity]:
