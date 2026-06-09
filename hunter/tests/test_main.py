@@ -32,10 +32,9 @@ def test_run_executa_pipeline_completo(capsys):
 def test_run_envia_quando_nao_dry_run():
     """run() without dry-run calls the Telegram sender for qualified opportunities."""
     collector = ManualCollector(FIXTURES)
-    with (
-        patch("src.claude_client.score_opportunity", return_value=_fake_score()),
-        patch("src.telegram_sender.send_message") as mock_send,
-    ):
+    with patch("src.claude_client.score_opportunity", return_value=_fake_score()), patch(
+        "src.telegram_sender.send_message"
+    ) as mock_send:
         main.run(collector, dry_run=False)
 
     assert mock_send.called

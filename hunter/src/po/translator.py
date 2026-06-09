@@ -63,11 +63,20 @@ def translate(opportunity: Opportunity) -> Spec:
     client = anthropic.Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
     response = client.messages.create(
         model=_MODEL,
-        max_tokens=1500,
+        max_tokens=4000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": _build_user_content(opportunity)}],
     )
     block = response.content[0]
     if block.type != "text":
         raise ValueError(f"Unexpected response block type: {block.type}")
+
+    # If the model hit the token ceiling, the JSON is cut off mid-string.
+    # Fail with a clear message instead of an opaque JSON parse error.
+    if response.stop_reason == "max_tokens":
+        raise ValueError(
+            "PO response was truncated (hit max_tokens). The spec is too large; "
+            "increase max_tokens or simplify the briefing."
+        )
+
     return _to_spec(_extract_json(block.text))

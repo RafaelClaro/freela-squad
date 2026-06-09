@@ -29,7 +29,8 @@ def _has_incompatible_stack(opportunity: Opportunity) -> bool:
     # Match whole words only, so short keywords like "ios" don't match inside
     # words such as "varios" or "negocios".
     return any(
-        re.search(rf"\b{re.escape(keyword)}\b", text) for keyword in INCOMPATIBLE_STACK_KEYWORDS
+        re.search(rf"\b{re.escape(keyword)}\b", text)
+        for keyword in INCOMPATIBLE_STACK_KEYWORDS
     )
 
 

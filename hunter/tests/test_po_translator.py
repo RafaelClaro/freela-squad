@@ -50,6 +50,7 @@ def _mock_claude(payload: dict):
     block.text = json.dumps(payload)
     response = MagicMock()
     response.content = [block]
+    response.stop_reason = "end_turn"
     client = MagicMock()
     client.messages.create.return_value = response
     return client
