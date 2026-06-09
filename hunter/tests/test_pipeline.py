@@ -71,3 +71,37 @@ def test_spec_to_markdown_renderiza():
     md = pipeline.spec_to_markdown(spec)
     assert "# Spec: Orders API" in md
     assert "## Objetivo" in md
+
+
+def test_decide_architecture_usa_arquiteto(monkeypatch):
+    """decide_architecture runs the Arquiteto and returns a decision."""
+    from src.po.models import Spec
+
+    spec = Spec(
+        project_name="Orders API",
+        objective="x",
+        deliverables=["a"],
+        functional_requirements=["b"],
+        out_of_scope=["c"],
+        acceptance_criteria=["d"],
+        assumptions=["e"],
+    )
+    go_json = {
+        "project_name": "Orders API",
+        "go": True,
+        "reason": "ok",
+        "estimated_hours": 18,
+        "implied_rate": 44.0,
+        "realistic_days": 3,
+        "database": "PostgreSQL",
+        "auth_type": "API Key",
+        "folder_structure": "src/",
+        "dependencies": [],
+        "technical_alerts": [],
+        "architecture_notes": "",
+    }
+    monkeypatch.setenv("CLAUDE_API_KEY", "fake")
+    with patch("src.arquiteto.decider.anthropic.Anthropic", return_value=_mock_claude(go_json)):
+        decision = pipeline.decide_architecture(spec, _OPP)
+    assert decision.go is True
+    assert "# Decisão Arquitetural" in pipeline.decision_to_markdown(decision)

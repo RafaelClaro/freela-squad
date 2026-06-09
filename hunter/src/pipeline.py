@@ -12,6 +12,9 @@ never automatically on everything the Hunter surfaces.
 import logging
 
 from src import classifier
+from src.arquiteto import decider
+from src.arquiteto import formatter as arq_formatter
+from src.arquiteto.models import ArchitectureDecision
 from src.models import Opportunity
 from src.po import formatter, translator
 from src.po.models import Spec
@@ -44,3 +47,24 @@ def translate_to_spec(opportunity: Opportunity) -> Spec:
 def spec_to_markdown(spec: Spec) -> str:
     """Render an approved spec as markdown for Rafael to read and hand to the Arquiteto."""
     return formatter.to_markdown(spec)
+
+
+def decide_architecture(spec: Spec, opportunity: Opportunity) -> ArchitectureDecision:
+    """Stage 4 — Arquiteto assesses the spec and emits a binding Go/No-go.
+
+    The Arquiteto can veto an opportunity the Hunter approved (e.g. implied rate
+    below the squad's floor), so this is the real viability gate.
+    """
+    logger.info(f"Arquiteto: deciding on #{opportunity.id}")
+    decision = decider.decide(spec, opportunity)
+    verdict = "GO" if decision.go else "NO-GO"
+    logger.info(
+        f"Arquiteto: #{opportunity.id} -> {verdict} "
+        f"({decision.estimated_hours:.0f}h, ${decision.implied_rate:.0f}/h)"
+    )
+    return decision
+
+
+def decision_to_markdown(decision: ArchitectureDecision) -> str:
+    """Render the architecture decision as markdown for Rafael."""
+    return arq_formatter.to_markdown(decision)

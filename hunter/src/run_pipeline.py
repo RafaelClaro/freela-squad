@@ -63,6 +63,15 @@ def main() -> None:
     spec = pipeline.translate_to_spec(approved)
     print(pipeline.spec_to_markdown(spec))
 
+    if spec.untranslatable:
+        print("\nSpec intraduzível — não segue para o Arquiteto.")
+        return
+
+    # Stage 4 — Arquiteto decides Go/No-go.
+    print(f"\n=== STAGE 4: Arquiteto deciding on #{approved.id} ===\n")
+    decision = pipeline.decide_architecture(spec, approved)
+    print(pipeline.decision_to_markdown(decision))
+
 
 if __name__ == "__main__":
     main()
