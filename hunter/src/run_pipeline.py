@@ -81,6 +81,19 @@ def main() -> None:
     guide = pipeline.define_standards(decision)
     print(pipeline.guide_to_markdown(guide))
 
+    # Stage 6 — Fullstack plans features and scaffolds the project.
+    print(f"\n=== STAGE 6: Fullstack planning + scaffold for #{approved.id} ===\n")
+    implementation_plan = pipeline.plan_implementation(spec, decision)
+    print(pipeline.plan_to_markdown(implementation_plan))
+
+    scaffold = pipeline.build_project_scaffold(decision.project_name)
+    print(f"\nScaffold pronto: {len(scaffold.files)} arquivos.")
+    answer = input("Escrever o scaffold em disco? Caminho (ou Enter para pular): ").strip()
+    if answer:
+        written = pipeline.write_scaffold_to_disk(scaffold, answer)
+        print(f"\n{len(written)} arquivos escritos em {answer}")
+        print("Rode 'pytest' lá para confirmar que o esqueleto funciona.")
+
 
 if __name__ == "__main__":
     main()

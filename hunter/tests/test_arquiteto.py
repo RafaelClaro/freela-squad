@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 from src.arquiteto.decider import _to_decision, decide
 from src.arquiteto.formatter import to_markdown
-from src.arquiteto.models import ArchitectureDecision
 from src.models import Opportunity
 from src.po.models import Spec
 
