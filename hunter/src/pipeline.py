@@ -19,8 +19,13 @@ from src.engenheiro import definer
 from src.engenheiro import formatter as eng_formatter
 from src.engenheiro.models import EngineeringGuide
 from src.fullstack import formatter as fs_formatter
-from src.fullstack import planner, scaffolder
-from src.fullstack.models import ImplementationPlan, Scaffold
+from src.fullstack import generator, planner, scaffolder
+from src.fullstack.models import (
+    Feature,
+    FeatureImplementation,
+    ImplementationPlan,
+    Scaffold,
+)
 from src.models import Opportunity
 from src.po import formatter, translator
 from src.po.models import Spec
@@ -131,4 +136,44 @@ def write_scaffold_to_disk(scaffold: Scaffold, target_dir: str) -> list[str]:
             handle.write(generated.content)
         written.append(full_path)
     logger.info(f"Fullstack: wrote {len(written)} files to {target_dir}")
+    return written
+
+
+def implement_feature(
+    feature: "Feature",
+    guide: "EngineeringGuide",
+    existing_files: list[str],
+) -> FeatureImplementation:
+    """Stage 6c — Fullstack generates the code for one feature (syntax-validated)."""
+    logger.info(f"Fullstack: implementing feature '{feature.name}'")
+    result = generator.generate_feature(feature, guide, existing_files)
+    if result.syntax_ok:
+        logger.info(f"Fullstack: '{feature.name}' generated {len(result.files)} valid files")
+    else:
+        logger.warning(f"Fullstack: '{feature.name}' has syntax errors: {result.syntax_errors}")
+    return result
+
+
+def write_feature_to_disk(
+    implementation: FeatureImplementation, target_dir: str
+) -> list[str]:
+    """Write a feature's files to disk — only if syntax is valid.
+
+    Refuses to write invalid Python, so broken code never lands in the project.
+    """
+    import os
+
+    if not implementation.syntax_ok:
+        raise ValueError(
+            f"Refusing to write '{implementation.feature_name}': syntax errors "
+            f"{implementation.syntax_errors}"
+        )
+    written = []
+    for generated in implementation.files:
+        full_path = os.path.join(target_dir, generated.path)
+        os.makedirs(os.path.dirname(full_path) or target_dir, exist_ok=True)
+        with open(full_path, "w", encoding="utf-8") as handle:
+            handle.write(generated.content)
+        written.append(full_path)
+    logger.info(f"Fullstack: wrote feature '{implementation.feature_name}' ({len(written)} files)")
     return written

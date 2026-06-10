@@ -37,3 +37,19 @@ def test_texto_sem_json_levanta_erro():
     """Text with no JSON object raises, so scoring can degrade gracefully."""
     with pytest.raises(Exception):
         _extract_json("desculpe, nao consegui analisar")
+
+
+def test_extract_json_tolera_trailing_comma():
+    """The model sometimes emits trailing commas; _extract_json tolerates them."""
+    from src.claude_client import _extract_json
+
+    assert _extract_json('{"files": [{"path": "a.py"},]}')["files"][0]["path"] == "a.py"
+    assert _extract_json('{"value": 5,}')["value"] == 5
+    assert _extract_json('{"a": [1, 2,], "b": {"c": 3,},}')["b"]["c"] == 3
+
+
+def test_extract_json_nao_corrompe_string_interna():
+    """Trailing-comma cleanup must not touch commas inside string values."""
+    from src.claude_client import _extract_json
+
+    assert _extract_json('{"code": "items = [1, 2]"}')["code"] == "items = [1, 2]"

@@ -12,11 +12,20 @@ import anthropic
 from src.models import Opportunity
 
 
+def _strip_trailing_commas(text: str) -> str:
+    """Remove trailing commas before } or ], which strict JSON rejects.
+
+    The model sometimes emits a comma after the last item of an object/array
+    (valid in JS, invalid in JSON). This makes parsing tolerant of that slip.
+    """
+    return re.sub(r",(\s*[}\]])", r"\1", text)
+
+
 def _extract_json(text: str) -> dict:
     """Extract a JSON object from the model's reply, tolerating extra text.
 
-    Handles plain JSON, JSON wrapped in ```json fences, and JSON with
-    surrounding prose by grabbing the first {...} block.
+    Handles plain JSON, JSON wrapped in ```json fences, JSON with surrounding
+    prose (grabs the first {...} block), and trailing commas the model may emit.
     """
     stripped = text.strip()
     # Remove markdown code fences if present.
@@ -25,11 +34,17 @@ def _extract_json(text: str) -> dict:
     try:
         return json.loads(stripped)
     except json.JSONDecodeError:
-        # Fallback: grab the first {...} block anywhere in the text.
-        match = re.search(r"\{.*\}", stripped, re.DOTALL)
-        if not match:
-            raise
-        return json.loads(match.group(0))
+        pass
+    # Try again after removing trailing commas.
+    try:
+        return json.loads(_strip_trailing_commas(stripped))
+    except json.JSONDecodeError:
+        pass
+    # Fallback: grab the first {...} block anywhere, also stripping trailing commas.
+    match = re.search(r"\{.*\}", stripped, re.DOTALL)
+    if not match:
+        raise json.JSONDecodeError("No JSON object found", stripped, 0)
+    return json.loads(_strip_trailing_commas(match.group(0)))
 
 
 _MODEL = "claude-haiku-4-5"

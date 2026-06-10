@@ -55,3 +55,17 @@ class Scaffold:
 
     project_name: str
     files: list[GeneratedFile] = field(default_factory=list)
+
+
+@dataclass
+class FeatureImplementation:
+    """The code generated for one feature: its files plus a syntax-validity flag.
+
+    syntax_ok is False if any generated Python file failed to parse — the caller
+    should not write invalid code to disk. syntax_errors explains what failed.
+    """
+
+    feature_name: str
+    files: list[GeneratedFile] = field(default_factory=list)
+    syntax_ok: bool = True
+    syntax_errors: list[str] = field(default_factory=list)

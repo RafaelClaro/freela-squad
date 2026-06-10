@@ -13,3 +13,8 @@ select = ["E", "F", "I", "N", "W"]
 python_version = "3.11"
 warn_unused_ignores = true
 ignore_missing_imports = true
+[tool.coverage.run]
+omit = [
+    "src/run_pipeline.py",
+    "src/run_feature.py",
+]
