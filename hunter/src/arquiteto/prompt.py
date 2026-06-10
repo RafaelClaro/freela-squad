@@ -48,6 +48,10 @@ STEP 4 — ARCHITECTURE (only if GO):
 Define database (+ why), auth type, folder structure, critical dependencies with
 risk levels, and technical alerts for the Engenheiro.
 
+IMPORTANT — numeric fields must be plain numbers, not strings. "implied_rate" must
+be a bare number (e.g. 44.4), not "44 USD/h". Put any currency note or conversion
+explanation in "architecture_notes" or "reason", never in the numeric fields.
+
 Respond with ONLY a JSON object, no markdown, no preamble:
 {
   "project_name": "<name>",

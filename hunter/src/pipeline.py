@@ -15,6 +15,9 @@ from src import classifier
 from src.arquiteto import decider
 from src.arquiteto import formatter as arq_formatter
 from src.arquiteto.models import ArchitectureDecision
+from src.engenheiro import definer
+from src.engenheiro import formatter as eng_formatter
+from src.engenheiro.models import EngineeringGuide
 from src.models import Opportunity
 from src.po import formatter, translator
 from src.po.models import Spec
@@ -68,3 +71,23 @@ def decide_architecture(spec: Spec, opportunity: Opportunity) -> ArchitectureDec
 def decision_to_markdown(decision: ArchitectureDecision) -> str:
     """Render the architecture decision as markdown for Rafael."""
     return arq_formatter.to_markdown(decision)
+
+
+def define_standards(decision: ArchitectureDecision) -> EngineeringGuide:
+    """Stage 5 — Engenheiro defines the binding engineering standards for the Dev.
+
+    Runs only on a Go decision. Carries the squad's fixed standards plus the
+    project-specific guidance derived from the architecture.
+    """
+    logger.info(f"Engenheiro: defining standards for {decision.project_name}")
+    guide = definer.define(decision)
+    logger.info(
+        f"Engenheiro: {len(guide.custom_exceptions)} custom exceptions, "
+        f"{len(guide.testing_guidance)} testing guidelines"
+    )
+    return guide
+
+
+def guide_to_markdown(guide: EngineeringGuide) -> str:
+    """Render the engineering guide as markdown for the Dev."""
+    return eng_formatter.to_markdown(guide)

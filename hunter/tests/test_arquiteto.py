@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from src.arquiteto.decider import _to_decision, decide
 from src.arquiteto.formatter import to_markdown
+from src.arquiteto.models import ArchitectureDecision
 from src.models import Opportunity
 from src.po.models import Spec
 
@@ -122,3 +123,21 @@ def test_markdown_nogo_curto_e_claro():
     assert "❌ NO-GO" in md
     assert "Rate abaixo" in md
     assert "## Estrutura de pastas" not in md  # architecture omitted on No-go
+
+
+def test_as_number_aguenta_string_descritiva():
+    """Numeric fields survive descriptive strings the model sometimes returns."""
+    from src.arquiteto.decider import _as_number
+
+    assert _as_number(44.4) == 44.4
+    assert _as_number("500 BRL/h (~$100/h USD equivalent)") == 500.0
+    assert _as_number("$44.44/h") == 44.44
+    assert _as_number(None) == 0.0
+    assert _as_number("no number") == 0.0
+
+
+def test_decision_com_rate_em_string_nao_quebra():
+    """A decision whose implied_rate came as a rich string is parsed, not crashed."""
+    data = dict(_GO_JSON, implied_rate="500 BRL/h (~$100/h USD equivalent; strong)")
+    decision = _to_decision(data)
+    assert decision.implied_rate == 500.0

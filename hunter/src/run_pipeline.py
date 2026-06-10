@@ -72,6 +72,15 @@ def main() -> None:
     decision = pipeline.decide_architecture(spec, approved)
     print(pipeline.decision_to_markdown(decision))
 
+    if not decision.go:
+        print("\nNo-go do Arquiteto — pipeline encerrado aqui.")
+        return
+
+    # Stage 5 — Engenheiro defines the standards for the Dev.
+    print(f"\n=== STAGE 5: Engenheiro defining standards for #{approved.id} ===\n")
+    guide = pipeline.define_standards(decision)
+    print(pipeline.guide_to_markdown(guide))
+
 
 if __name__ == "__main__":
     main()

@@ -6,6 +6,7 @@ JSON parsing is consistent across the squad. Claude is mocked in tests.
 """
 
 import os
+import re
 
 import anthropic
 
@@ -16,6 +17,22 @@ from src.models import Opportunity
 from src.po.models import Spec
 
 _MODEL = "claude-haiku-4-5"
+
+
+def _as_number(value: object) -> float:
+    """Extract a number from a value that may be a number or a descriptive string.
+
+    The model sometimes returns rich strings like "500 BRL/h (~$100/h)". We pull
+    the first numeric token so the pipeline never crashes on a formatted rate.
+    Returns 0.0 if no number is found.
+    """
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        match = re.search(r"\d+(?:\.\d+)?", value.replace(",", ""))
+        if match:
+            return float(match.group(0))
+    return 0.0
 
 
 def _build_user_content(spec: Spec, opportunity: Opportunity) -> str:
@@ -47,9 +64,9 @@ def _to_decision(data: dict) -> ArchitectureDecision:
         project_name=data.get("project_name", ""),
         go=data.get("go", False),
         reason=data.get("reason", ""),
-        estimated_hours=float(data.get("estimated_hours", 0) or 0),
-        implied_rate=float(data.get("implied_rate", 0) or 0),
-        realistic_days=int(data.get("realistic_days", 0) or 0),
+        estimated_hours=_as_number(data.get("estimated_hours")),
+        implied_rate=_as_number(data.get("implied_rate")),
+        realistic_days=int(_as_number(data.get("realistic_days"))),
         database=data.get("database", ""),
         auth_type=data.get("auth_type", ""),
         folder_structure=data.get("folder_structure", ""),
