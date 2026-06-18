@@ -49,15 +49,42 @@ def _has_print(project_dir: str) -> bool:
     return False
 
 
+def _find_project_python(project_dir: str) -> str:
+    """Return the python executable for the project's own venv, or sys.executable.
+
+    Generated projects have their own venv with the app's runtime dependencies
+    (fastapi, httpx, etc.). We use that python for pytest so the app can be
+    imported. Ruff and mypy are always run with the squad's own python (sys.executable)
+    because the project venv may not have them.
+    """
+    import os
+
+    for candidate in (
+        os.path.join(project_dir, "venv", "Scripts", "python.exe"),  # Windows
+        os.path.join(project_dir, "venv", "bin", "python"),  # Unix
+        os.path.join(project_dir, ".venv", "Scripts", "python.exe"),
+        os.path.join(project_dir, ".venv", "bin", "python"),
+    ):
+        if os.path.isfile(candidate):
+            return candidate
+    return sys.executable
+
+
 def run_checks(project_dir: str) -> TechnicalChecks:
-    """Run pytest (with coverage), ruff, and mypy on the project; collect the facts."""
+    """Run pytest (with coverage), ruff, and mypy on the project; collect the facts.
+
+    pytest runs under the project's own venv python (so the app's deps are available).
+    ruff and mypy always run under the squad's python (sys.executable), which has
+    those tools installed regardless of the project venv's contents.
+    """
     checks = TechnicalChecks()
 
-    py = sys.executable  # same venv as the squad, so ruff/mypy/pytest are available
+    project_py = _find_project_python(project_dir)
+    squad_py = sys.executable
 
-    # Tests + coverage in one run.
+    # Tests + coverage — use project venv so app imports (fastapi, etc.) work.
     code, output = _run(
-        [py, "-m", "pytest", "--cov=app", "--cov-report=term", "-q"], project_dir
+        [project_py, "-m", "pytest", "--cov=app", "--cov-report=term", "-q"], project_dir
     )
     checks.tests_passed = code == 0
     summary_match = re.search(r"(\d+ passed[^\n]*)", output)
@@ -69,12 +96,19 @@ def run_checks(project_dir: str) -> TechnicalChecks:
     else:
         checks.notes.append("coverage not detected in pytest output")
 
-    # Ruff.
-    ruff_code, _ruff_out = _run([py, "-m", "ruff", "check", "app", "tests"], project_dir)
+    # Ruff — always use squad python (which has ruff installed).
+    ruff_code, _ruff_out = _run(
+        [squad_py, "-m", "ruff", "check", "app", "tests"], project_dir
+    )
     checks.ruff_clean = ruff_code == 0
 
-    # MyPy.
-    mypy_code, _mypy_out = _run([py, "-m", "mypy", "app"], project_dir)
+    # MyPy — always use squad python (which has mypy installed).
+    # --ignore-missing-imports: generated projects may not have stubs for their
+    # runtime deps (fastapi, sqlalchemy, etc.) — we check the squad's own code
+    # for type errors, not whether third-party stubs are installed.
+    mypy_code, _mypy_out = _run(
+        [squad_py, "-m", "mypy", "--ignore-missing-imports", "app"], project_dir
+    )
     checks.mypy_clean = mypy_code == 0
 
     # print() scan.
