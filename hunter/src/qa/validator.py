@@ -37,26 +37,48 @@ Respond with ONLY a JSON object, no markdown, no preamble:
 }"""
 
 
-def _build_user_content(spec: Spec, delivered_files: list[str]) -> str:
-    """Render the spec requirements and delivered files for functional validation."""
+def _build_user_content(
+    spec: Spec, technical: TechnicalChecks, delivered_files: list[str]
+) -> str:
+    """Render spec requirements, measured technical results, and delivered files.
+
+    The technical facts (test count, coverage %, linting) are already measured
+    objectively by the checker. Including them here prevents Claude from guessing
+    at numbers it cannot observe and focuses its judgement on functional coverage.
+    """
     requirements = "\n".join(f"- {item}" for item in spec.functional_requirements)
     criteria = "\n".join(f"- {item}" for item in spec.acceptance_criteria)
     files = "\n".join(f"- {path}" for path in delivered_files)
+    tech_summary = (
+        f"Tests: {'PASSED' if technical.tests_passed else 'FAILED'} "
+        f"({technical.tests_summary})\n"
+        f"Coverage: {technical.coverage_percent:.0f}% "
+        f"({'OK' if technical.coverage_ok else 'BELOW 80%'})\n"
+        f"Ruff: {'clean' if technical.ruff_clean else 'errors found'}\n"
+        f"MyPy: {'clean' if technical.mypy_clean else 'errors found'}\n"
+        f"print() in code: {'YES (blocker)' if technical.has_print_statements else 'none'}"
+    )
     return (
+        f"TECHNICAL CHECK RESULTS (already measured — do not second-guess these):\n"
+        f"{tech_summary}\n\n"
         f"SPEC REQUIREMENTS:\n{requirements}\n\n"
         f"ACCEPTANCE CRITERIA:\n{criteria}\n\n"
         f"DELIVERED FILES:\n{files}"
     )
 
 
-def _validate_functional(spec: Spec, delivered_files: list[str]) -> tuple[list, list, str]:
+def _validate_functional(
+    spec: Spec, technical: TechnicalChecks, delivered_files: list[str]
+) -> tuple[list, list, str]:
     """Call Claude for functional coverage. Returns (findings, bugs, summary)."""
     client = anthropic.Anthropic(api_key=os.environ["CLAUDE_API_KEY"])
     response = client.messages.create(
         model=_MODEL,
         max_tokens=3000,
         system=_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": _build_user_content(spec, delivered_files)}],
+        messages=[
+            {"role": "user", "content": _build_user_content(spec, technical, delivered_files)}
+        ],
     )
     block = response.content[0]
     if block.type != "text":
@@ -92,7 +114,7 @@ def _decide(technical: TechnicalChecks, findings: list, bugs: list) -> bool:
 
 def validate(spec: Spec, technical: TechnicalChecks, delivered_files: list[str]) -> QAReport:
     """Produce the QA report: functional validation + verdict under the zero-bug rule."""
-    findings, bugs, summary = _validate_functional(spec, delivered_files)
+    findings, bugs, summary = _validate_functional(spec, technical, delivered_files)
     go = _decide(technical, findings, bugs)
     return QAReport(
         project_name=spec.project_name,
