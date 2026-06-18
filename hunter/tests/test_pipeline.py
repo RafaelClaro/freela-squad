@@ -147,8 +147,6 @@ def test_run_technical_checks_delega_ao_checker():
 
 def test_validate_quality_go(monkeypatch):
     """validate_quality returns a Go report when everything is clean."""
-    import json
-
     payload = {
         "findings": [{"requirement": "CRUD orders", "covered": True, "note": "orders.py"}],
         "bugs": [],

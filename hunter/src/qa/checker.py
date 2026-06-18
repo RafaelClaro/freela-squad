@@ -9,6 +9,7 @@ blockers under the squad's zero-bug rule.
 import logging
 import re
 import subprocess  # noqa: S404 - needed to run the project's own tooling
+import sys
 
 from src.qa.models import TechnicalChecks
 
@@ -52,9 +53,11 @@ def run_checks(project_dir: str) -> TechnicalChecks:
     """Run pytest (with coverage), ruff, and mypy on the project; collect the facts."""
     checks = TechnicalChecks()
 
+    py = sys.executable  # same venv as the squad, so ruff/mypy/pytest are available
+
     # Tests + coverage in one run.
     code, output = _run(
-        ["python", "-m", "pytest", "--cov=app", "--cov-report=term", "-q"], project_dir
+        [py, "-m", "pytest", "--cov=app", "--cov-report=term", "-q"], project_dir
     )
     checks.tests_passed = code == 0
     summary_match = re.search(r"(\d+ passed[^\n]*)", output)
@@ -67,11 +70,11 @@ def run_checks(project_dir: str) -> TechnicalChecks:
         checks.notes.append("coverage not detected in pytest output")
 
     # Ruff.
-    ruff_code, _ruff_out = _run(["python", "-m", "ruff", "check", "app", "tests"], project_dir)
+    ruff_code, _ruff_out = _run([py, "-m", "ruff", "check", "app", "tests"], project_dir)
     checks.ruff_clean = ruff_code == 0
 
     # MyPy.
-    mypy_code, _mypy_out = _run(["python", "-m", "mypy", "app"], project_dir)
+    mypy_code, _mypy_out = _run([py, "-m", "mypy", "app"], project_dir)
     checks.mypy_clean = mypy_code == 0
 
     # print() scan.

@@ -89,10 +89,36 @@ def main() -> None:
     scaffold = pipeline.build_project_scaffold(decision.project_name)
     print(f"\nScaffold pronto: {len(scaffold.files)} arquivos.")
     answer = input("Escrever o scaffold em disco? Caminho (ou Enter para pular): ").strip()
-    if answer:
-        written = pipeline.write_scaffold_to_disk(scaffold, answer)
-        print(f"\n{len(written)} arquivos escritos em {answer}")
-        print("Rode 'pytest' lá para confirmar que o esqueleto funciona.")
+    if not answer:
+        print("Scaffold não escrito. Fim.")
+        return
+
+    written = pipeline.write_scaffold_to_disk(scaffold, answer)
+    print(f"\n{len(written)} arquivos escritos em {answer}")
+
+    # Stage 7 — QA validates the delivered project (zero-bug gate).
+    print(f"\n=== STAGE 7: QA validating {decision.project_name} ===\n")
+    print("  Rodando pytest + ruff + mypy no projeto gerado...", flush=True)
+    technical = pipeline.run_technical_checks(answer)
+
+    cov_status = "OK" if technical.coverage_ok else "ABAIXO DE 80%"
+    print_status = "SIM (bloqueador)" if technical.has_print_statements else "Nenhum"
+    print(f"  Testes: {'OK' if technical.tests_passed else 'FAIL'} — {technical.tests_summary}")
+    print(f"  Cobertura: {technical.coverage_percent:.0f}% ({cov_status})")
+    print(f"  Ruff: {'OK' if technical.ruff_clean else 'FALHOU'}")
+    print(f"  Mypy: {'OK' if technical.mypy_clean else 'FALHOU'}")
+    print(f"  print() no código: {print_status}")
+
+    print("\n  Validando cobertura funcional contra a spec (Claude)...", flush=True)
+    delivered = [f.replace("\\", "/") for f in written]
+    report = pipeline.validate_quality(spec, technical, delivered)
+
+    print("\n" + pipeline.qa_report_to_markdown(report))
+
+    if not report.go:
+        print("Pipeline encerrado com NO-GO do QA. Corrija os itens marcados com ❌.")
+    else:
+        print("Entrega aprovada pelo QA. Pronto para o cliente.")
 
 
 if __name__ == "__main__":
