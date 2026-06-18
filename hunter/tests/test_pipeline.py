@@ -105,3 +105,86 @@ def test_decide_architecture_usa_arquiteto(monkeypatch):
         decision = pipeline.decide_architecture(spec, _OPP)
     assert decision.go is True
     assert "# Decisão Arquitetural" in pipeline.decision_to_markdown(decision)
+
+
+# ── Stage 7: QA ──────────────────────────────────────────────────────────────
+
+def _make_spec():
+    from src.po.models import Spec
+
+    return Spec(
+        project_name="Orders API",
+        objective="x",
+        deliverables=["a"],
+        functional_requirements=["CRUD orders"],
+        out_of_scope=[],
+        acceptance_criteria=["Given order, when created, then persists"],
+        assumptions=[],
+    )
+
+
+def _all_green():
+    from src.qa.models import TechnicalChecks
+
+    return TechnicalChecks(
+        tests_passed=True,
+        tests_summary="5 passed",
+        coverage_percent=88.0,
+        coverage_ok=True,
+        ruff_clean=True,
+        mypy_clean=True,
+        has_print_statements=False,
+    )
+
+
+def test_run_technical_checks_delega_ao_checker():
+    """run_technical_checks delegates to checker.run_checks and returns TechnicalChecks."""
+    with patch("src.pipeline.checker.run_checks", return_value=_all_green()) as mock_check:
+        result = pipeline.run_technical_checks("/tmp/proj")
+    assert result.tests_passed is True
+    mock_check.assert_called_once_with("/tmp/proj")
+
+
+def test_validate_quality_go(monkeypatch):
+    """validate_quality returns a Go report when everything is clean."""
+    import json
+
+    payload = {
+        "findings": [{"requirement": "CRUD orders", "covered": True, "note": "orders.py"}],
+        "bugs": [],
+        "summary": "All good.",
+    }
+    monkeypatch.setenv("CLAUDE_API_KEY", "fake")
+    with patch("src.qa.validator.anthropic.Anthropic", return_value=_mock_claude(payload)):
+        report = pipeline.validate_quality(_make_spec(), _all_green(), ["app/routes/orders.py"])
+    assert report.go is True
+    assert report.project_name == "Orders API"
+
+
+def test_validate_quality_nogo_com_bug(monkeypatch):
+    """validate_quality returns No-go when Claude reports a bug."""
+    payload = {
+        "findings": [{"requirement": "CRUD orders", "covered": False, "note": "missing"}],
+        "bugs": ["DELETE /orders not implemented"],
+        "summary": "Missing endpoint.",
+    }
+    monkeypatch.setenv("CLAUDE_API_KEY", "fake")
+    with patch("src.qa.validator.anthropic.Anthropic", return_value=_mock_claude(payload)):
+        report = pipeline.validate_quality(_make_spec(), _all_green(), ["app/main.py"])
+    assert report.go is False
+
+
+def test_qa_report_to_markdown_renderiza():
+    """qa_report_to_markdown produces the verdict header and technical section."""
+    from src.qa.models import QAReport
+
+    report = QAReport(
+        project_name="Orders API",
+        go=True,
+        technical=_all_green(),
+        summary="All good.",
+    )
+    md = pipeline.qa_report_to_markdown(report)
+    assert "✅ GO" in md
+    assert "Orders API" in md
+    assert "Cobertura" in md

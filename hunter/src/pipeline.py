@@ -3,6 +3,8 @@
 The flow mirrors the squad's real process:
 
     Hunter qualifies  ->  Rafael approves  ->  PO translates to spec
+    -> Arquiteto decides -> Engenheiro sets standards -> Fullstack builds
+    -> QA validates (zero-bug gate)
 
 Rafael's approval sits between qualification and translation on purpose: the PO
 (which costs Claude API calls) only runs on opportunities Rafael actually wants,
@@ -29,6 +31,9 @@ from src.fullstack.models import (
 from src.models import Opportunity
 from src.po import formatter, translator
 from src.po.models import Spec
+from src.qa import checker, validator
+from src.qa import formatter as qa_formatter
+from src.qa.models import QAReport, TechnicalChecks
 
 logger = logging.getLogger(__name__)
 
@@ -177,3 +182,42 @@ def write_feature_to_disk(
         written.append(full_path)
     logger.info(f"Fullstack: wrote feature '{implementation.feature_name}' ({len(written)} files)")
     return written
+
+
+def run_technical_checks(project_dir: str) -> TechnicalChecks:
+    """Stage 7a — QA runs the tooling on the delivered project for hard facts.
+
+    Shells out to pytest (with coverage), ruff, and mypy inside project_dir.
+    No Claude, no opinion — only what the tools report. Called after all features
+    have been written to disk.
+    """
+    logger.info(f"QA: running technical checks on {project_dir}")
+    checks = checker.run_checks(project_dir)
+    logger.info(
+        f"QA: tests={'OK' if checks.tests_passed else 'FAIL'} "
+        f"cov={checks.coverage_percent:.0f}% "
+        f"ruff={'OK' if checks.ruff_clean else 'FAIL'} "
+        f"mypy={'OK' if checks.mypy_clean else 'FAIL'}"
+    )
+    return checks
+
+
+def validate_quality(
+    spec: Spec, technical: TechnicalChecks, delivered_files: list[str]
+) -> QAReport:
+    """Stage 7b — QA validates functional coverage against the spec and emits the verdict.
+
+    Combines the objective technical checks (already run) with Claude's functional
+    validation. Returns a QAReport whose .go field is the binding Go/No-go under
+    the squad's zero-bug rule: ANY failure blocks delivery.
+    """
+    logger.info(f"QA: validating functional coverage for {spec.project_name}")
+    report = validator.validate(spec, technical, delivered_files)
+    verdict = "GO" if report.go else "NO-GO"
+    logger.info(f"QA: {spec.project_name} -> {verdict} ({len(report.bugs)} bugs)")
+    return report
+
+
+def qa_report_to_markdown(report: QAReport) -> str:
+    """Render the QA report as markdown for Rafael."""
+    return qa_formatter.to_markdown(report)
